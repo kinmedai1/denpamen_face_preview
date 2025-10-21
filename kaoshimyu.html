@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>電波人間顔パーツシミュレーター</title>
+    <style>
+        /* --- 全体スタイル --- */
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f0f2f5;
+            color: #333;
+        }
+
+        h1, h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        /* --- シミュレーターエリア --- */
+        .simulator-area {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 30px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        /* 顔プレビュー */
+        #face-preview {
+            width: 200px;
+            height: 200px;
+            position: relative;
+            border: 2px solid #ccc;
+            background-color: #fff;
+            border-radius: 16px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        #face-preview .part-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        
+        /* パーツの重ね順 */
+        #preview-kami-rinkaku { z-index: 2; }
+        #preview-hoo { z-index: 3; }
+        #preview-me { z-index: 4; }
+        #preview-mayu { z-index: 5; }
+        #preview-hana { z-index: 6; }
+        #preview-kuchi { z-index: 7; }
+        
+        #preview-kami-rinkaku {
+            transform: scale(1) translate(0px, 0px) rotate(0deg) scaleX(1) scaleY(1);
+        }
+        #preview-mayu {
+            transform: scale(0.55) translate(0px, -57px) rotate(0deg) scaleX(1) scaleY(1);
+        }
+        #preview-me {
+            transform: scale(0.65) translate(3px, 0px) rotate(0deg) scaleX(1) scaleY(1);
+        }
+        #preview-hana {
+            transform: scale(0.3) translate(-10px, 60px) rotate(0deg) scaleX(1) scaleY(1);
+        }
+        #preview-hoo {
+            transform: scale(0.7) translate(5px, 45px) rotate(0deg) scaleX(1) scaleY(1);
+        }
+        #preview-kuchi {
+            transform: scale(0.6) translate(5px, 75px) rotate(0deg) scaleX(1) scaleY(1);
+        }
+
+
+        /* 選択情報 */
+        #selection-info {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            min-width: 220px;
+        }
+
+        #selection-info h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        #selection-info p {
+            margin: 12px 0;
+            font-size: 1em;
+            display: flex;
+            align-items: center;
+        }
+
+        #selection-info p a {
+            text-decoration: none;
+            color: inherit;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        #selection-info p a:hover {
+            text-decoration: underline;
+        }
+
+
+        #selection-info span.part-id {
+            font-weight: bold;
+            display: inline-block;
+            width: 60px;
+            text-align: right;
+            margin-left: 10px;
+            padding: 2px 6px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+        }
+        
+        .color-preview {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-left: 10px;
+            vertical-align: middle;
+            background-size: cover;
+            background-position: center;
+        }
+
+
+        .reset-part-btn, #reset-all-btn {
+            padding: 4px 10px;
+            font-size: 0.8em;
+            border: 1px solid #ccc;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .reset-part-btn:hover, #reset-all-btn:hover {
+            background-color: #e2e6ea;
+        }
+
+        #reset-all-btn {
+            display: block;
+            width: 100%;
+            margin-top: 20px;
+            padding: 10px;
+            font-size: 1em;
+            background-color: #dc3545;
+            color: white;
+            border: none;
+        }
+        #reset-all-btn:hover {
+            background-color: #c82333;
+        }
+
+        /* --- パーツ選択エリア --- */
+        .selector-container {
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            padding: 0;
+        }
+
+        summary.header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            list-style: none;
+            padding: 20px;
+        }
+        
+        .header-title {
+            display: flex;
+            align-items: center;
+        }
+        
+        summary.header::-webkit-details-marker {
+            display: none;
+        }
+
+        summary.header .header-title::before {
+            content: "▶";
+            font-size: 1.2em;
+            margin-right: 10px;
+            transition: transform 0.3s ease;
+        }
+
+        details[open] summary.header .header-title::before {
+            transform: rotate(90deg);
+        }
+
+        summary.header h3 {
+            margin: 0;
+            font-size: 1.2em;
+        }
+        
+        .selector-container .grid-container {
+            padding: 0 20px 20px 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+            row-gap: 20px;
+            column-gap: 15px;
+        }
+
+        #kami-rinkaku .grid-container {
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+        }
+
+        .box {
+            position: relative;
+            width: 100%;
+            padding-top: 100%;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            cursor: pointer;
+            box-sizing: border-box;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+        .box:hover {
+            transform: scale(1.05);
+            border-color: #aaa;
+        }
+        
+        .box.selected {
+            border-color: #007bff;
+            box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
+        }
+
+        .box-number {
+            font-size: 0.8em;
+            color: #333;
+            background-color: rgba(255, 255, 255, 0.7);
+            padding: 1px 4px;
+            border-radius: 3px;
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+        }
+
+        /* --- 各パーツの画像指定 --- */
+        #kami-iro .box-0 { background-image: url('髪色画像/0.png'); }
+        #kami-iro .box-1 { background-image: url('髪色画像/1.png'); }
+        #kami-iro .box-2 { background-image: url('髪色画像/2.png'); }
+        #kami-iro .box-3 { background-image: url('髪色画像/3.png'); }
+        #kami-iro .box-4 { background-image: url('髪色画像/4.png'); }
+        #kami-iro .box-5 { background-image: url('髪色画像/5.png'); }
+        #kami-iro .box-6 { background-image: url('髪色画像/6.png'); }
+        #kami-iro .box-7 { background-image: url('髪色画像/7.png'); }
+        #kami-iro .box-8 { background-image: url('髪色画像/8.png'); }
+        #kami-iro .box-9 { background-image: url('髪色画像/9.png'); }
+        #kami-iro .box-10 { background-image: url('髪色画像/10.png'); }
+        #kami-iro .box-11 { background-image: url('髪色画像/11.png'); }
+        #hada-iro .box-0 { background-image: url('肌色画像/0.png'); }
+        #hada-iro .box-1 { background-image: url('肌色画像/1.png'); }
+        #hada-iro .box-2 { background-image: url('肌色画像/2.png'); }
+        #hada-iro .box-3 { background-image: url('肌色画像/3.png'); }
+        #hada-iro .box-4 { background-image: url('肌色画像/4.png'); }
+        #hada-iro .box-5 { background-image: url('肌色画像/5.png'); }
+        #hada-iro .box-6 { background-image: url('肌色画像/6.png'); }
+        #hada-iro .box-7 { background-image: url('肌色画像/7.png'); }
+        #hada-iro .box-8 { background-image: url('肌色画像/8.png'); }
+        #hada-iro .box-9 { background-image: url('肌色画像/9.png'); }
+        #hada-iro .box-10 { background-image: url('肌色画像/10.png'); }
+        #kami-rinkaku .box-0 { background-image: url('髪・輪郭画像/0.png'); }
+        #kami-rinkaku .box-1 { background-image: url('髪・輪郭画像/1.png'); }
+        #kami-rinkaku .box-2 { background-image: url('髪・輪郭画像/2.png'); }
+        #kami-rinkaku .box-3 { background-image: url('髪・輪郭画像/3.png'); }
+        #kami-rinkaku .box-4 { background-image: url('髪・輪郭画像/4.png'); }
+        #kami-rinkaku .box-5 { background-image: url('髪・輪郭画像/5.png'); }
+        #kami-rinkaku .box-6 { background-image: url('髪・輪郭画像/6.png'); }
+        #kami-rinkaku .box-7 { background-image: url('髪・輪郭画像/7.png'); }
+        #kami-rinkaku .box-8 { background-image: url('髪・輪郭画像/8.png'); }
+        #kami-rinkaku .box-9 { background-image: url('髪・輪郭画像/9.png'); }
+        #kami-rinkaku .box-10 { background-image: url('髪・輪郭画像/10.png'); }
+        #kami-rinkaku .box-11 { background-image: url('髪・輪郭画像/11.png'); }
+        #kami-rinkaku .box-12 { background-image: url('髪・輪郭画像/12.png'); }
+        #kami-rinkaku .box-13 { background-image: url('髪・輪郭画像/13.png'); }
+        #kami-rinkaku .box-14 { background-image: url('髪・輪郭画像/14.png'); }
+        #kami-rinkaku .box-15 { background-image: url('髪・輪郭画像/15.png'); }
+        #kami-rinkaku .box-16 { background-image: url('髪・輪郭画像/16.png'); }
+        #kami-rinkaku .box-17 { background-image: url('髪・輪郭画像/17.png'); }
+        #kami-rinkaku .box-18 { background-image: url('髪・輪郭画像/18.png'); }
+        #kami-rinkaku .box-19 { background-image: url('髪・輪郭画像/19.png'); }
+        #kami-rinkaku .box-20 { background-image: url('髪・輪郭画像/20.png'); }
+        #kami-rinkaku .box-21 { background-image: url('髪・輪郭画像/21.png'); }
+        #kami-rinkaku .box-22 { background-image: url('髪・輪郭画像/22.png'); }
+        #kami-rinkaku .box-23 { background-image: url('髪・輪郭画像/23.png'); }
+        #kami-rinkaku .box-24 { background-image: url('髪・輪郭画像/24.png'); }
+        #kami-rinkaku .box-25 { background-image: url('髪・輪郭画像/25.png'); }
+        #kami-rinkaku .box-26 { background-image: url('髪・輪郭画像/26.png'); }
+        #kami-rinkaku .box-27 { background-image: url('髪・輪郭画像/27.png'); }
+        #kami-rinkaku .box-28 { background-image: url('髪・輪郭画像/28.png'); }
+        #kami-rinkaku .box-29 { background-image: url('髪・輪郭画像/29.png'); }
+        #kami-rinkaku .box-30 { background-image: url('髪・輪郭画像/30.png'); }
+        #kami-rinkaku .box-31 { background-image: url('髪・輪郭画像/31.png'); }
+        #kami-rinkaku .box-32 { background-image: url('髪・輪郭画像/32.png'); }
+        #kami-rinkaku .box-33 { background-image: url('髪・輪郭画像/33.png'); }
+        #kami-rinkaku .box-34 { background-image: url('髪・輪郭画像/34.png'); }
+        #kami-rinkaku .box-35 { background-image: url('髪・輪郭画像/35.png'); }
+        #kami-rinkaku .box-36 { background-image: url('髪・輪郭画像/36.png'); }
+        #kami-rinkaku .box-37 { background-image: url('髪・輪郭画像/37.png'); }
+        #kami-rinkaku .box-38 { background-image: url('髪・輪郭画像/38.png'); }
+        #kami-rinkaku .box-39 { background-image: url('髪・輪郭画像/39.png'); }
+        #kami-rinkaku .box-40 { background-image: url('髪・輪郭画像/40.png'); }
+        #kami-rinkaku .box-41 { background-image: url('髪・輪郭画像/41.png'); }
+        #kami-rinkaku .box-42 { background-image: url('髪・輪郭画像/42.png'); }
+        #kami-rinkaku .box-43 { background-image: url('髪・輪郭画像/43.png'); }
+        #kami-rinkaku .box-44 { background-image: url('髪・輪郭画像/44.png'); }
+        #kami-rinkaku .box-45 { background-image: url('髪・輪郭画像/45.png'); }
+        #kami-rinkaku .box-46 { background-image: url('髪・輪郭画像/46.png'); }
+        #kami-rinkaku .box-47 { background-image: url('髪・輪郭画像/47.png'); }
+        #kami-rinkaku .box-48 { background-image: url('髪・輪郭画像/48.png'); }
+        #kami-rinkaku .box-49 { background-image: url('髪・輪郭画像/49.png'); }
+        #kami-rinkaku .box-50 { background-image: url('髪・輪郭画像/50.png'); }
+        #kami-rinkaku .box-51 { background-image: url('髪・輪郭画像/51.png'); }
+        #kami-rinkaku .box-52 { background-image: url('髪・輪郭画像/52.png'); }
+        #kami-rinkaku .box-53 { background-image: url('髪・輪郭画像/53.png'); }
+        #kami-rinkaku .box-54 { background-image: url('髪・輪郭画像/54.png'); }
+        #kami-rinkaku .box-55 { background-image: url('髪・輪郭画像/55.png'); }
+        #kami-rinkaku .box-56 { background-image: url('髪・輪郭画像/56.png'); }
+        #kami-rinkaku .box-57 { background-image: url('髪・輪郭画像/57.png'); }
+        #kami-rinkaku .box-58 { background-image: url('髪・輪郭画像/58.png'); }
+        #kami-rinkaku .box-59 { background-image: url('髪・輪郭画像/59.png'); }
+        #kami-rinkaku .box-60 { background-image: url('髪・輪郭画像/60.png'); }
+        #kami-rinkaku .box-61 { background-image: url('髪・輪郭画像/61.png'); }
+        #kami-rinkaku .box-62 { background-image: url('髪・輪郭画像/62.png'); }
+        #kami-rinkaku .box-63 { background-image: url('髪・輪郭画像/63.png'); }
+        #kami-rinkaku .box-64 { background-image: url('髪・輪郭画像/64.png'); }
+        #kami-rinkaku .box-65 { background-image: url('髪・輪郭画像/65.png'); }
+        #kami-rinkaku .box-66 { background-image: url('髪・輪郭画像/66.png'); }
+        #kami-rinkaku .box-67 { background-image: url('髪・輪郭画像/67.png'); }
+        #kami-rinkaku .box-68 { background-image: url('髪・輪郭画像/68.png'); }
+        #kami-rinkaku .box-69 { background-image: url('髪・輪郭画像/69.png'); }
+        #kami-rinkaku .box-70 { background-image: url('髪・輪郭画像/70.png'); }
+        #kami-rinkaku .box-71 { background-image: url('髪・輪郭画像/71.png'); }
+        #kami-rinkaku .box-72 { background-image: url('髪・輪郭画像/72.png'); }
+        #kami-rinkaku .box-73 { background-image: url('髪・輪郭画像/73.png'); }
+        #kami-rinkaku .box-74 { background-image: url('髪・輪郭画像/74.png'); }
+        #kami-rinkaku .box-75 { background-image: url('髪・輪郭画像/75.png'); }
+        #kami-rinkaku .box-76 { background-image: url('髪・輪郭画像/76.png'); }
+        #kami-rinkaku .box-77 { background-image: url('髪・輪郭画像/77.png'); }
+        #kami-rinkaku .box-78 { background-image: url('髪・輪郭画像/78.png'); }
+        #kami-rinkaku .box-79 { background-image: url('髪・輪郭画像/79.png'); }
+        #kami-rinkaku .box-80 { background-image: url('髪・輪郭画像/80.png'); }
+        #kami-rinkaku .box-81 { background-image: url('髪・輪郭画像/81.png'); }
+        #kami-rinkaku .box-82 { background-image: url('髪・輪郭画像/82.png'); }
+        #kami-rinkaku .box-83 { background-image: url('髪・輪郭画像/83.png'); }
+        #kami-rinkaku .box-84 { background-image: url('髪・輪郭画像/84.png'); }
+        #kami-rinkaku .box-85 { background-image: url('髪・輪郭画像/85.png'); }
+        #kami-rinkaku .box-86 { background-image: url('髪・輪郭画像/86.png'); }
+        #kami-rinkaku .box-87 { background-image: url('髪・輪郭画像/87.png'); }
+        #kami-rinkaku .box-88 { background-image: url('髪・輪郭画像/88.png'); }
+        #kami-rinkaku .box-89 { background-image: url('髪・輪郭画像/89.png'); }
+        #kami-rinkaku .box-90 { background-image: url('髪・輪郭画像/90.png'); }
+        #kami-rinkaku .box-91 { background-image: url('髪・輪郭画像/91.png'); }
+        #kami-rinkaku .box-92 { background-image: url('髪・輪郭画像/92.png'); }
+        #kami-rinkaku .box-93 { background-image: url('髪・輪郭画像/93.png'); }
+        #kami-rinkaku .box-94 { background-image: url('髪・輪郭画像/94.png'); }
+        #me .box-0 { background-image: url('目画像/0.png'); }
+        #me .box-1 { background-image: url('目画像/1.png'); }
+        #me .box-2 { background-image: url('目画像/2.png'); }
+        #me .box-3 { background-image: url('目画像/3.png'); }
+        #me .box-4 { background-image: url('目画像/4.png'); }
+        #me .box-5 { background-image: url('目画像/5.png'); }
+        #me .box-6 { background-image: url('目画像/6.png'); }
+        #me .box-7 { background-image: url('目画像/7.png'); }
+        #me .box-8 { background-image: url('目画像/8.png'); }
+        #me .box-9 { background-image: url('目画像/9.png'); }
+        #me .box-10 { background-image: url('目画像/10.png'); }
+        #me .box-11 { background-image: url('目画像/11.png'); }
+        #me .box-12 { background-image: url('目画像/12.png'); }
+        #me .box-13 { background-image: url('目画像/13.png'); }
+        #me .box-14 { background-image: url('目画像/14.png'); }
+        #me .box-15 { background-image: url('目画像/15.png'); }
+        #me .box-16 { background-image: url('目画像/16.png'); }
+        #me .box-17 { background-image: url('目画像/17.png'); }
+        #me .box-18 { background-image: url('目画像/18.png'); }
+        #me .box-19 { background-image: url('目画像/19.png'); }
+        #me .box-20 { background-image: url('目画像/20.png'); }
+        #me .box-21 { background-image: url('目画像/21.png'); }
+        #me .box-22 { background-image: url('目画像/22.png'); }
+        #me .box-23 { background-image: url('目画像/23.png'); }
+        #me .box-24 { background-image: url('目画像/24.png'); }
+        #me .box-25 { background-image: url('目画像/25.png'); }
+        #me .box-26 { background-image: url('目画像/26.png'); }
+        #me .box-27 { background-image: url('目画像/27.png'); }
+        #me .box-28 { background-image: url('目画像/28.png'); }
+        #me .box-29 { background-image: url('目画像/29.png'); }
+        #me .box-30 { background-image: url('目画像/30.png'); }
+        #me .box-31 { background-image: url('目画像/31.png'); }
+        #me .box-32 { background-image: url('目画像/32.png'); }
+        #me .box-33 { background-image: url('目画像/33.png'); }
+        #me .box-34 { background-image: url('目画像/34.png'); }
+        #me .box-35 { background-image: url('目画像/35.png'); }
+        #me .box-36 { background-image: url('目画像/36.png'); }
+        #me .box-37 { background-image: url('目画像/37.png'); }
+        #me .box-38 { background-image: url('目画像/38.png'); }
+        #me .box-39 { background-image: url('目画像/39.png'); }
+        #me .box-40 { background-image: url('目画像/40.png'); }
+        #me .box-41 { background-image: url('目画像/41.png'); }
+        #me .box-42 { background-image: url('目画像/42.png'); }
+        #me .box-43 { background-image: url('目画像/43.png'); }
+        #me .box-44 { background-image: url('目画像/44.png'); }
+        #me .box-45 { background-image: url('目画像/45.png'); }
+        #me .box-46 { background-image: url('目画像/46.png'); }
+        #me .box-47 { background-image: url('目画像/47.png'); }
+        #me .box-48 { background-image: url('目画像/48.png'); }
+        #me .box-49 { background-image: url('目画像/49.png'); }
+        #me .box-50 { background-image: url('目画像/50.png'); }
+        #me .box-51 { background-image: url('目画像/51.png'); }
+        #me .box-52 { background-image: url('目画像/52.png'); }
+        #me .box-53 { background-image: url('目画像/53.png'); }
+        #me .box-54 { background-image: url('目画像/54.png'); }
+        #me .box-55 { background-image: url('目画像/55.png'); }
+        #me .box-56 { background-image: url('目画像/56.png'); }
+        #me .box-57 { background-image: url('目画像/57.png'); }
+        #me .box-58 { background-image: url('目画像/58.png'); }
+        #me .box-59 { background-image: url('目画像/59.png'); }
+        #me .box-60 { background-image: url('目画像/60.png'); }
+        #me .box-61 { background-image: url('目画像/61.png'); }
+        #me .box-62 { background-image: url('目画像/62.png'); }
+        #me .box-63 { background-image: url('目画像/63.png'); }
+        #me .box-64 { background-image: url('目画像/64.png'); }
+        #me .box-65 { background-image: url('目画像/65.png'); }
+        #me .box-66 { background-image: url('目画像/66.png'); }
+        #me .box-67 { background-image: url('目画像/67.png'); }
+        #kuchi .box-0 { background-image: url('口画像/0.png'); }
+        #kuchi .box-1 { background-image: url('口画像/1.png'); }
+        #kuchi .box-2 { background-image: url('口画像/2.png'); }
+        #kuchi .box-3 { background-image: url('口画像/3.png'); }
+        #kuchi .box-4 { background-image: url('口画像/4.png'); }
+        #kuchi .box-5 { background-image: url('口画像/5.png'); }
+        #kuchi .box-6 { background-image: url('口画像/6.png'); }
+        #kuchi .box-7 { background-image: url('口画像/7.png'); }
+        #kuchi .box-8 { background-image: url('口画像/8.png'); }
+        #kuchi .box-9 { background-image: url('口画像/9.png'); }
+        #kuchi .box-10 { background-image: url('口画像/10.png'); }
+        #kuchi .box-11 { background-image: url('口画像/11.png'); }
+        #kuchi .box-12 { background-image: url('口画像/12.png'); }
+        #kuchi .box-13 { background-image: url('口画像/13.png'); }
+        #kuchi .box-14 { background-image: url('口画像/14.png'); }
+        #kuchi .box-15 { background-image: url('口画像/15.png'); }
+        #kuchi .box-16 { background-image: url('口画像/16.png'); }
+        #kuchi .box-17 { background-image: url('口画像/17.png'); }
+        #kuchi .box-18 { background-image: url('口画像/18.png'); }
+        #kuchi .box-19 { background-image: url('口画像/19.png'); }
+        #kuchi .box-20 { background-image: url('口画像/20.png'); }
+        #kuchi .box-21 { background-image: url('口画像/21.png'); }
+        #kuchi .box-22 { background-image: url('口画像/22.png'); }
+        #kuchi .box-23 { background-image: url('口画像/23.png'); }
+        #kuchi .box-24 { background-image: url('口画像/24.png'); }
+        #kuchi .box-25 { background-image: url('口画像/25.png'); }
+        #kuchi .box-26 { background-image: url('口画像/26.png'); }
+        #kuchi .box-27 { background-image: url('口画像/27.png'); }
+        #kuchi .box-28 { background-image: url('口画像/28.png'); }
+        #kuchi .box-29 { background-image: url('口画像/29.png'); }
+        #kuchi .box-30 { background-image: url('口画像/30.png'); }
+        #kuchi .box-31 { background-image: url('口画像/31.png'); }
+        #kuchi .box-32 { background-image: url('口画像/32.png'); }
+        #kuchi .box-33 { background-image: url('口画像/33.png'); }
+        #kuchi .box-34 { background-image: url('口画像/34.png'); }
+        #kuchi .box-35 { background-image: url('口画像/35.png'); }
+        #kuchi .box-36 { background-image: url('口画像/36.png'); }
+        #kuchi .box-37 { background-image: url('口画像/37.png'); }
+        #kuchi .box-38 { background-image: url('口画像/38.png'); }
+        #kuchi .box-39 { background-image: url('口画像/39.png'); }
+        #kuchi .box-40 { background-image: url('口画像/40.png'); }
+        #kuchi .box-41 { background-image: url('口画像/41.png'); }
+        #kuchi .box-42 { background-image: url('口画像/42.png'); }
+        #kuchi .box-43 { background-image: url('口画像/43.png'); }
+        #kuchi .box-44 { background-image: url('口画像/44.png'); }
+        #kuchi .box-45 { background-image: url('口画像/45.png'); }
+        #kuchi .box-46 { background-image: url('口画像/46.png'); }
+        #kuchi .box-47 { background-image: url('口画像/47.png'); }
+        #kuchi .box-48 { background-image: url('口画像/48.png'); }
+        #kuchi .box-49 { background-image: url('口画像/49.png'); }
+        #kuchi .box-50 { background-image: url('口画像/50.png'); }
+        #kuchi .box-51 { background-image: url('口画像/51.png'); }
+        #kuchi .box-52 { background-image: url('口画像/52.png'); }
+        #kuchi .box-53 { background-image: url('口画像/53.png'); }
+        #kuchi .box-54 { background-image: url('口画像/54.png'); }
+        #kuchi .box-55 { background-image: url('口画像/55.png'); }
+        #kuchi .box-56 { background-image: url('口画像/56.png'); }
+        #kuchi .box-57 { background-image: url('口画像/57.png'); }
+        #kuchi .box-58 { background-image: url('口画像/58.png'); }
+        #kuchi .box-59 { background-image: url('口画像/59.png'); }
+        #kuchi .box-60 { background-image: url('口画像/60.png'); }
+        #kuchi .box-61 { background-image: url('口画像/61.png'); }
+        #kuchi .box-62 { background-image: url('口画像/62.png'); }
+        #kuchi .box-63 { background-image: url('口画像/63.png'); }
+        #kuchi .box-64 { background-image: url('口画像/64.png'); }
+        #kuchi .box-65 { background-image: url('口画像/65.png'); }
+        #kuchi .box-66 { background-image: url('口画像/66.png'); }
+        #kuchi .box-67 { background-image: url('口画像/67.png'); }
+        #kuchi .box-68 { background-image: url('口画像/68.png'); }
+        #kuchi .box-69 { background-image: url('口画像/69.png'); }
+        #kuchi .box-70 { background-image: url('口画像/70.png'); }
+        #hana .box-0 { background-image: url('鼻画像/0.png'); }
+        #hana .box-1 { background-image: url('鼻画像/1.png'); }
+        #hana .box-2 { background-image: url('鼻画像/2.png'); }
+        #hana .box-3 { background-image: url('鼻画像/3.png'); }
+        #hana .box-4 { background-image: url('鼻画像/4.png'); }
+        #hana .box-5 { background-image: url('鼻画像/5.png'); }
+        #hana .box-6 { background-image: url('鼻画像/6.png'); }
+        #hana .box-7 { background-image: url('鼻画像/7.png'); }
+        #hana .box-8 { background-image: url('鼻画像/8.png'); }
+        #hana .box-9 { background-image: url('鼻画像/9.png'); }
+        #hana .box-10 { background-image: url('鼻画像/10.png'); }
+        #hana .box-11 { background-image: url('鼻画像/11.png'); }
+        #hana .box-12 { background-image: url('鼻画像/12.png'); }
+        #hana .box-13 { background-image: url('鼻画像/13.png'); }
+        #hana .box-14 { background-image: url('鼻画像/14.png'); }
+        #hana .box-15 { background-image: url('鼻画像/15.png'); }
+        #hana .box-16 { background-image: url('鼻画像/16.png'); }
+        #hana .box-17 { background-image: url('鼻画像/17.png'); }
+        #hana .box-18 { background-image: url('鼻画像/18.png'); }
+        #hana .box-19 { background-image: url('鼻画像/19.png'); }
+        #hana .box-20 { background-image: url('鼻画像/20.png'); }
+        #hana .box-21 { background-image: url('鼻画像/21.png'); }
+        #hana .box-22 { background-image: url('鼻画像/22.png'); }
+        #hana .box-23 { background-image: url('鼻画像/23.png'); }
+        #hana .box-24 { background-image: url('鼻画像/24.png'); }
+        #hana .box-25 { background-image: url('鼻画像/25.png'); }
+        #hana .box-26 { background-image: url('鼻画像/26.png'); }
+        #hana .box-27 { background-image: url('鼻画像/27.png'); }
+        #hana .box-28 { background-image: url('鼻画像/28.png'); }
+        #hana .box-29 { background-image: url('鼻画像/29.png'); }
+        #hana .box-30 { background-image: url('鼻画像/30.png'); }
+        #hana .box-31 { background-image: url('鼻画像/31.png'); }
+        #hana .box-32 { background-image: url('鼻画像/32.png'); }
+        #hana .box-33 { background-image: url('鼻画像/33.png'); }
+        #hana .box-34 { background-image: url('鼻画像/34.png'); }
+        #hana .box-35 { background-image: url('鼻画像/35.png'); }
+        #hana .box-36 { background-image: url('鼻画像/36.png'); }
+        #hana .box-37 { background-image: url('鼻画像/37.png'); }
+        #hana .box-38 { background-image: url('鼻画像/38.png'); }
+        #hana .box-39 { background-image: url('鼻画像/39.png'); }
+        #hana .box-40 { background-image: url('鼻画像/40.png'); }
+        #hana .box-41 { background-image: url('鼻画像/41.png'); }
+        #mayu .box-0 { background-image: url('眉画像/0.png'); }
+        #mayu .box-1 { background-image: url('眉画像/1.png'); }
+        #mayu .box-2 { background-image: url('眉画像/2.png'); }
+        #mayu .box-3 { background-image: url('眉画像/3.png'); }
+        #mayu .box-4 { background-image: url('眉画像/4.png'); }
+        #mayu .box-5 { background-image: url('眉画像/5.png'); }
+        #mayu .box-6 { background-image: url('眉画像/6.png'); }
+        #mayu .box-7 { background-image: url('眉画像/7.png'); }
+        #mayu .box-8 { background-image: url('眉画像/8.png'); }
+        #mayu .box-9 { background-image: url('眉画像/9.png'); }
+        #mayu .box-10 { background-image: url('眉画像/10.png'); }
+        #mayu .box-11 { background-image: url('眉画像/11.png'); }
+        #mayu .box-12 { background-image: url('眉画像/12.png'); }
+        #mayu .box-13 { background-image: url('眉画像/13.png'); }
+        #mayu .box-14 { background-image: url('眉画像/14.png'); }
+        #mayu .box-15 { background-image: url('眉画像/15.png'); }
+        #mayu .box-16 { background-image: url('眉画像/16.png'); }
+        #mayu .box-17 { background-image: url('眉画像/17.png'); }
+        #mayu .box-18 { background-image: url('眉画像/18.png'); }
+        #mayu .box-19 { background-image: url('眉画像/19.png'); }
+        #mayu .box-20 { background-image: url('眉画像/20.png'); }
+        #mayu .box-21 { background-image: url('眉画像/21.png'); }
+        #mayu .box-22 { background-image: url('眉画像/22.png'); }
+        #mayu .box-23 { background-image: url('眉画像/23.png'); }
+        #mayu .box-24 { background-image: url('眉画像/24.png'); }
+        #mayu .box-25 { background-image: url('眉画像/25.png'); }
+        #mayu .box-26 { background-image: url('眉画像/26.png'); }
+        #mayu .box-27 { background-image: url('眉画像/27.png'); }
+        #mayu .box-28 { background-image: url('眉画像/28.png'); }
+        #mayu .box-29 { background-image: url('眉画像/29.png'); }
+        #mayu .box-30 { background-image: url('眉画像/30.png'); }
+        #mayu .box-31 { background-image: url('眉画像/31.png'); }
+        #mayu .box-32 { background-image: url('眉画像/32.png'); }
+        #mayu .box-33 { background-image: url('眉画像/33.png'); }
+        #mayu .box-34 { background-image: url('眉画像/34.png'); }
+        #mayu .box-35 { background-image: url('眉画像/35.png'); }
+        #mayu .box-36 { background-image: url('眉画像/36.png'); }
+        #mayu .box-37 { background-image: url('眉画像/37.png'); }
+        #mayu .box-38 { background-image: url('眉画像/38.png'); }
+        #hoo .box-0 { background-image: url('頬画像/0.png'); }
+        #hoo .box-1 { background-image: url('頬画像/1.png'); }
+        #hoo .box-2 { background-image: url('頬画像/2.png'); }
+        #hoo .box-3 { background-image: url('頬画像/3.png'); }
+        #hoo .box-4 { background-image: url('頬画像/4.png'); }
+        #hoo .box-5 { background-image: url('頬画像/5.png'); }
+        #hoo .box-6 { background-image: url('頬画像/6.png'); }
+        #hoo .box-7 { background-image: url('頬画像/7.png'); }
+        #hoo .box-8 { background-image: url('頬画像/8.png'); }
+        #hoo .box-9 { background-image: url('頬画像/9.png'); }
+        #hoo .box-10 { background-image: url('頬画像/10.png'); }
+        #hoo .box-11 { background-image: url('頬画像/11.png'); }
+        #hoo .box-12 { background-image: url('頬画像/12.png'); }
+        #hoo .box-13 { background-image: url('頬画像/13.png'); }
+    </style>
+</head>
+<body>
+    <h1>電波人間顔パーツシミュレーター</h1>
+    <div class="simulator-area">
+        <div id="face-preview">
+            <div id="preview-kami-rinkaku" class="part-layer"></div>
+            <div id="preview-hoo" class="part-layer"></div>
+            <div id="preview-me" class="part-layer"></div>
+            <div id="preview-mayu" class="part-layer"></div>
+            <div id="preview-hana" class="part-layer"></div>
+            <div id="preview-kuchi" class="part-layer"></div>
+        </div>
+        <div id="selection-info">
+            <h3>選択中のパーツ</h3>
+            <p><a href="#selector-kami-iro" class="scroll-link">かみいろ</a>: <span id="info-kami-iro" class="part-id">未選択</span> <span class="color-preview" id="preview-info-kami-iro"></span></p>
+            <p><a href="#selector-hada-iro" class="scroll-link">はだいろ</a>: <span id="info-hada-iro" class="part-id">未選択</span> <span class="color-preview" id="preview-info-hada-iro"></span></p>
+            <p><a href="#selector-kami-rinkaku" class="scroll-link">かみ・りんかく</a>: <span id="info-kami-rinkaku" class="part-id">未選択</span></p>
+            <p><a href="#selector-mayu" class="scroll-link">まゆ</a>: <span id="info-mayu" class="part-id">未選択</span></p>
+            <p><a href="#selector-me" class="scroll-link">め</a>: <span id="info-me" class="part-id">未選択</span></p>
+            <p><a href="#selector-hana" class="scroll-link">はな</a>: <span id="info-hana" class="part-id">未選択</span></p>
+            <p><a href="#selector-hoo" class="scroll-link">ほっぺ</a>: <span id="info-hoo" class="part-id">未選択</span></p>
+            <p><a href="#selector-kuchi" class="scroll-link">くち</a>: <span id="info-kuchi" class="part-id">未選択</span></p>
+            <button id="reset-all-btn">すべてリセット</button>
+        </div>
+    </div>
+    
+    <h2>パーツを選択</h2>
+    <details id="selector-kami-iro" class="selector-container" open>
+        <summary class="header">
+            <div class="header-title"><h3>かみいろ</h3></div>
+            <button class="reset-part-btn" data-category="kami-iro">選択解除</button>
+        </summary>
+        <div id="kami-iro" class="grid-container">
+            <div class="box box-0"><span class="box-number">0</span></div><div class="box box-1"><span class="box-number">1</span></div><div class="box box-2"><span class="box-number">2</span></div><div class="box box-3"><span class="box-number">3</span></div><div class="box box-4"><span class="box-number">4</span></div><div class="box box-5"><span class="box-number">5</span></div><div class="box box-6"><span class="box-number">6</span></div><div class="box box-7"><span class="box-number">7</span></div><div class="box box-8"><span class="box-number">8</span></div><div class="box box-9"><span class="box-number">9</span></div><div class="box box-10"><span class="box-number">10</span></div><div class="box box-11"><span class="box-number">11</span></div>
+        </div>
+    </details>
+    <details id="selector-hada-iro" class="selector-container">
+        <summary class="header">
+            <div class="header-title"><h3>はだいろ</h3></div>
+            <button class="reset-part-btn" data-category="hada-iro">選択解除</button>
+        </summary>
+        <div id="hada-iro" class="grid-container">
+            <div class="box box-0"><span class="box-number">0</span></div><div class="box box-1"><span class="box-number">1</span></div><div class="box box-2"><span class="box-number">2</span></div><div class="box box-3"><span class="box-number">3</span></div><div class="box box-4"><span class="box-number">4</span></div><div class="box box-5"><span class="box-number">5</span></div><div class="box box-6"><span class="box-number">6</span></div><div class="box box-7"><span class="box-number">7</span></div><div class="box box-8"><span class="box-number">8</span></div><div class="box box-9"><span class="box-number">9</span></div><div class="box box-10"><span class="box-number">10</span></div>
+        </div>
+    </details>
+    <details id="selector-kami-rinkaku" class="selector-container">
+        <summary class="header">
+            <div class="header-title"><h3>かみ・りんかく</h3></div>
+            <button class="reset-part-btn" data-category="kami-rinkaku">選択解除</button>
+        </summary>
+        <div id="kami-rinkaku" class="grid-container">
+            <div class="box box-0"><span class="box-number">0</span></div><div class="box box-1"><span class="box-number">1</span></div><div class="box box-2"><span class="box-number">2</span></div><div class="box box-3"><span class="box-number">3</span></div><div class="box box-4"><span class="box-number">4</span></div><div class="box box-5"><span class="box-number">5</span></div><div class="box box-6"><span class="box-number">6</span></div><div class="box box-7"><span class="box-number">7</span></div><div class="box box-8"><span class="box-number">8</span></div><div class="box box-9"><span class="box-number">9</span></div><div class="box box-10"><span class="box-number">10</span></div><div class="box box-11"><span class="box-number">11</span></div><div class="box box-12"><span class="box-number">12</span></div><div class="box box-13"><span class="box-number">13</span></div><div class="box box-14"><span class="box-number">14</span></div><div class="box box-15"><span class="box-number">15</span></div><div class="box box-16"><span class="box-number">16</span></div><div class="box box-17"><span class="box-number">17</span></div><div class="box box-18"><span class="box-number">18</span></div><div class="box box-19"><span class="box-number">19</span></div><div class="box box-20"><span class="box-number">20</span></div><div class="box box-21"><span class="box-number">21</span></div><div class="box box-22"><span class="box-number">22</span></div><div class="box box-23"><span class="box-number">23</span></div><div class="box box-24"><span class="box-number">24</span></div><div class="box box-25"><span class="box-number">25</span></div><div class="box box-26"><span class="box-number">26</span></div><div class="box box-27"><span class="box-number">27</span></div><div class="box box-28"><span class="box-number">28</span></div><div class="box box-29"><span class="box-number">29</span></div><div class="box box-30"><span class="box-number">30</span></div><div class="box box-31"><span class="box-number">31</span></div><div class="box box-32"><span class="box-number">32</span></div><div class="box box-33"><span class="box-number">33</span></div><div class="box box-34"><span class="box-number">34</span></div><div class="box box-35"><span class="box-number">35</span></div><div class="box box-36"><span class="box-number">36</span></div><div class="box box-37"><span class="box-number">37</span></div><div class="box box-38"><span class="box-number">38</span></div><div class="box box-39"><span class="box-number">39</span></div><div class="box box-40"><span class="box-number">40</span></div><div class="box box-41"><span class="box-number">41</span></div><div class="box box-42"><span class="box-number">42</span></div><div class="box box-43"><span class="box-number">43</span></div><div class="box box-44"><span class="box-number">44</span></div><div class="box box-45"><span class="box-number">45</span></div><div class="box box-46"><span class="box-number">46</span></div><div class="box box-47"><span class="box-number">47</span></div><div class="box box-48"><span class="box-number">48</span></div><div class="box box-49"><span class="box-number">49</span></div><div class="box box-50"><span class="box-number">50</span></div><div class="box box-51"><span class="box-number">51</span></div><div class="box box-52"><span class="box-number">52</span></div><div class="box box-53"><span class="box-number">53</span></div><div class="box box-54"><span class="box-number">54</span></div><div class="box box-55"><span class="box-number">55</span></div><div class="box box-56"><span class="box-number">56</span></div><div class="box box-57"><span class="box-number">57</span></div><div class="box box-58"><span class="box-number">58</span></div><div class="box box-59"><span class="box-number">59</span></div><div class="box box-60"><span class="box-number">60</span></div><div class="box box-61"><span class="box-number">61</span></div><div class="box box-62"><span class="box-number">62</span></div><div class="box box-63"><span class="box-number">63</span></div><div class="box box-64"><span class="box-number">64</span></div><div class="box box-65"><span class="box-number">65</span></div><div class="box box-66"><span class="box-number">66</span></div><div class="box box-67"><span class="box-number">67</span></div><div class="box box-68"><span class="box-number">68</span></div><div class="box box-69"><span class="box-number">69</span></div><div class="box box-70"><span class="box-number">70</span></div><div class="box box-71"><span class="box-number">71</span></div><div class="box box-72"><span class="box-number">72</span></div><div class="box box-73"><span class="box-number">73</span></div><div class="box box-74"><span class="box-number">74</span></div><div class="box box-75"><span class="box-number">75</span></div><div class="box box-76"><span class="box-number">76</span></div><div class="box box-77"><span class="box-number">77</span></div><div class="box box-78"><span class="box-number">78</span></div><div class="box box-79"><span class="box-number">79</span></div><div class="box box-80"><span class="box-number">80</span></div><div class="box box-81"><span class="box-number">81</span></div><div class="box box-82"><span class="box-number">82</span></div><div class="box box-83"><span class="box-number">83</span></div><div class="box box-84"><span class="box-number">84</span></div><div class="box box-85"><span class="box-number">85</span></div><div class="box box-86"><span class="box-number">86</span></div><div class="box box-87"><span class="box-number">87</span></div><div class="box box-88"><span class="box-number">88</span></div><div class="box box-89"><span class="box-number">89</span></div><div class="box box-90"><span class="box-number">90</span></div><div class="box box-91"><span class="box-number">91</span></div><div class="box box-92"><span class="box-number">92</span></div><div class="box box-93"><span class="box-number">93</span></div><div class="box box-94"><span class="box-number">94</span></div>
+        </div>
+    </details>
+    <details id="selector-mayu" class="selector-container">
+        <summary class="header">
+            <div class="header-title"><h3>まゆ</h3></div>
+            <button class="reset-part-btn" data-category="mayu">選択解除</button>
+        </summary>
+        <div id="mayu" class="grid-container">
+            <div class="box box-0"><span class="box-number">0</span></div><div class="box box-1"><span class="box-number">1</span></div><div class="box box-2"><span class="box-number">2</span></div><div class="box box-3"><span class="box-number">3</span></div><div class="box box-4"><span class="box-number">4</span></div><div class="box box-5"><span class="box-number">5</span></div><div class="box box-6"><span class="box-number">6</span></div><div class="box box-7"><span class="box-number">7</span></div><div class="box box-8"><span class="box-number">8</span></div><div class="box box-9"><span class="box-number">9</span></div><div class="box box-10"><span class="box-number">10</span></div><div class="box box-11"><span class="box-number">11</span></div><div class="box box-12"><span class="box-number">12</span></div><div class="box box-13"><span class="box-number">13</span></div><div class="box box-14"><span class="box-number">14</span></div><div class="box box-15"><span class="box-number">15</span></div><div class="box box-16"><span class="box-number">16</span></div><div class="box box-17"><span class="box-number">17</span></div><div class="box box-18"><span class="box-number">18</span></div><div class="box box-19"><span class="box-number">19</span></div><div class="box box-20"><span class="box-number">20</span></div><div class="box box-21"><span class="box-number">21</span></div><div class="box box-22"><span class="box-number">22</span></div><div class="box box-23"><span class="box-number">23</span></div><div class="box box-24"><span class="box-number">24</span></div><div class="box box-25"><span class="box-number">25</span></div><div class="box box-26"><span class="box-number">26</span></div><div class="box box-27"><span class="box-number">27</span></div><div class="box box-28"><span class="box-number">28</span></div><div class="box box-29"><span class="box-number">29</span></div><div class="box box-30"><span class="box-number">30</span></div><div class="box box-31"><span class="box-number">31</span></div><div class="box box-32"><span class="box-number">32</span></div><div class="box box-33"><span class="box-number">33</span></div><div class="box box-34"><span class="box-number">34</span></div><div class="box box-35"><span class="box-number">35</span></div><div class="box box-36"><span class="box-number">36</span></div><div class="box box-37"><span class="box-number">37</span></div><div class="box box-38"><span class="box-number">38</span></div>
+        </div>
+    </details>
+    <details id="selector-me" class="selector-container">
+        <summary class="header">
+            <div class="header-title"><h3>め</h3></div>
+            <button class="reset-part-btn" data-category="me">選択解除</button>
+        </summary>
+        <div id="me" class="grid-container">
+            <div class="box box-0"><span class="box-number">0</span></div><div class="box box-1"><span class="box-number">1</span></div><div class="box box-2"><span class="box-number">2</span></div><div class="box box-3"><span class="box-number">3</span></div><div class="box box-4"><span class="box-number">4</span></div><div class="box box-5"><span class="box-number">5</span></div><div class="box box-6"><span class="box-number">6</span></div><div class="box box-7"><span class="box-number">7</span></div><div class="box box-8"><span class="box-number">8</span></div><div class="box box-9"><span class="box-number">9</span></div><div class="box box-10"><span class="box-number">10</span></div><div class="box box-11"><span class="box-number">11</span></div><div class="box box-12"><span class="box-number">12</span></div><div class="box box-13"><span class="box-number">13</span></div><div class="box box-14"><span class="box-number">14</span></div><div class="box box-15"><span class="box-number">15</span></div><div class="box box-16"><span class="box-number">16</span></div><div class="box box-17"><span class="box-number">17</span></div><div class="box box-18"><span class="box-number">18</span></div><div class="box box-19"><span class="box-number">19</span></div><div class="box box-20"><span class="box-number">20</span></div><div class="box box-21"><span class="box-number">21</span></div><div class="box box-22"><span class="box-number">22</span></div><div class="box box-23"><span class="box-number">23</span></div><div class="box box-24"><span class="box-number">24</span></div><div class="box box-25"><span class="box-number">25</span></div><div class="box box-26"><span class="box-number">26</span></div><div class="box box-27"><span class="box-number">27</span></div><div class="box box-28"><span class="box-number">28</span></div><div class="box box-29"><span class="box-number">29</span></div><div class="box box-30"><span class="box-number">30</span></div><div class="box box-31"><span class="box-number">31</span></div><div class="box box-32"><span class="box-number">32</span></div><div class="box box-33"><span class="box-number">33</span></div><div class="box box-34"><span class="box-number">34</span></div><div class="box box-35"><span class="box-number">35</span></div><div class="box box-36"><span class="box-number">36</span></div><div class="box box-37"><span class="box-number">37</span></div><div class="box box-38"><span class="box-number">38</span></div><div class="box box-39"><span class="box-number">39</span></div><div class="box box-40"><span class="box-number">40</span></div><div class="box box-41"><span class="box-number">41</span></div><div class="box box-42"><span class="box-number">42</span></div><div class="box box-43"><span class="box-number">43</span></div><div class="box box-44"><span class="box-number">44</span></div><div class="box box-45"><span class="box-number">45</span></div><div class="box box-46"><span class="box-number">46</span></div><div class="box box-47"><span class="box-number">47</span></div><div class="box box-48"><span class="box-number">48</span></div><div class="box box-49"><span class="box-number">49</span></div><div class="box box-50"><span class="box-number">50</span></div><div class="box box-51"><span class="box-number">51</span></div><div class="box box-52"><span class="box-number">52</span></div><div class="box box-53"><span class="box-number">53</span></div><div class="box box-54"><span class="box-number">54</span></div><div class="box box-55"><span class="box-number">55</span></div><div class="box box-56"><span class="box-number">56</span></div><div class="box box-57"><span class="box-number">57</span></div><div class="box box-58"><span class="box-number">58</span></div><div class="box box-59"><span class="box-number">59</span></div><div class="box box-60"><span class="box-number">60</span></div><div class="box box-61"><span class="box-number">61</span></div><div class="box box-62"><span class="box-number">62</span></div><div class="box box-63"><span class="box-number">63</span></div><div class="box box-64"><span class="box-number">64</span></div><div class="box box-65"><span class="box-number">65</span></div><div class="box box-66"><span class="box-number">66</span></div><div class="box box-67"><span class="box-number">67</span></div>
+        </div>
+    </details>
+    <details id="selector-hana" class="selector-container">
+        <summary class="header">
+            <div class="header-title"><h3>はな</h3></div>
+            <button class="reset-part-btn" data-category="hana">選択解除</button>
+        </summary>
+        <div id="hana" class="grid-container">
+            <div class="box box-0"><span class="box-number">0</span></div><div class="box box-1"><span class="box-number">1</span></div><div class="box box-2"><span class="box-number">2</span></div><div class="box box-3"><span class="box-number">3</span></div><div class="box box-4"><span class="box-number">4</span></div><div class="box box-5"><span class="box-number">5</span></div><div class="box box-6"><span class="box-number">6</span></div><div class="box box-7"><span class="box-number">7</span></div><div class="box box-8"><span class="box-number">8</span></div><div class="box box-9"><span class="box-number">9</span></div><div class="box box-10"><span class="box-number">10</span></div><div class="box box-11"><span class="box-number">11</span></div><div class="box box-12"><span class="box-number">12</span></div><div class="box box-13"><span class="box-number">13</span></div><div class="box box-14"><span class="box-number">14</span></div><div class="box box-15"><span class="box-number">15</span></div><div class="box box-16"><span class="box-number">16</span></div><div class="box box-17"><span class="box-number">17</span></div><div class="box box-18"><span class="box-number">18</span></div><div class="box box-19"><span class="box-number">19</span></div><div class="box box-20"><span class="box-number">20</span></div><div class="box box-21"><span class="box-number">21</span></div><div class="box box-22"><span class="box-number">22</span></div><div class="box box-23"><span class="box-number">23</span></div><div class="box box-24"><span class="box-number">24</span></div><div class="box box-25"><span class="box-number">25</span></div><div class="box box-26"><span class="box-number">26</span></div><div class="box box-27"><span class="box-number">27</span></div><div class="box box-28"><span class="box-number">28</span></div><div class="box box-29"><span class="box-number">29</span></div><div class="box box-30"><span class="box-number">30</span></div><div class="box box-31"><span class="box-number">31</span></div><div class="box box-32"><span class="box-number">32</span></div><div class="box box-33"><span class="box-number">33</span></div><div class="box box-34"><span class="box-number">34</span></div><div class="box box-35"><span class="box-number">35</span></div><div class="box box-36"><span class="box-number">36</span></div><div class="box box-37"><span class="box-number">37</span></div><div class="box box-38"><span class="box-number">38</span></div><div class="box box-39"><span class="box-number">39</span></div><div class="box box-40"><span class="box-number">40</span></div><div class="box box-41"><span class="box-number">41</span></div>
+        </div>
+    </details>
+    <details id="selector-hoo" class="selector-container">
+        <summary class="header">
+            <div class="header-title"><h3>ほっぺ</h3></div>
+            <button class="reset-part-btn" data-category="hoo">選択解除</button>
+        </summary>
+        <div id="hoo" class="grid-container">
+            <div class="box box-0"><span class="box-number">0</span></div><div class="box box-1"><span class="box-number">1</span></div><div class="box box-2"><span class="box-number">2</span></div><div class="box box-3"><span class="box-number">3</span></div><div class="box box-4"><span class="box-number">4</span></div><div class="box box-5"><span class="box-number">5</span></div><div class="box box-6"><span class="box-number">6</span></div><div class="box box-7"><span class="box-number">7</span></div><div class="box box-8"><span class="box-number">8</span></div><div class="box box-9"><span class="box-number">9</span></div><div class="box box-10"><span class="box-number">10</span></div><div class="box box-11"><span class="box-number">11</span></div><div class="box box-12"><span class="box-number">12</span></div><div class="box box-13"><span class="box-number">13</span></div>
+        </div>
+    </details>
+    <details id="selector-kuchi" class="selector-container">
+        <summary class="header">
+            <div class="header-title"><h3>くち</h3></div>
+            <button class="reset-part-btn" data-category="kuchi">選択解除</button>
+        </summary>
+        <div id="kuchi" class="grid-container">
+            <div class="box box-0"><span class="box-number">0</span></div><div class="box box-1"><span class="box-number">1</span></div><div class="box box-2"><span class="box-number">2</span></div><div class="box box-3"><span class="box-number">3</span></div><div class="box box-4"><span class="box-number">4</span></div><div class="box box-5"><span class="box-number">5</span></div><div class="box box-6"><span class="box-number">6</span></div><div class="box box-7"><span class="box-number">7</span></div><div class="box box-8"><span class="box-number">8</span></div><div class="box box-9"><span class="box-number">9</span></div><div class="box box-10"><span class="box-number">10</span></div><div class="box box-11"><span class="box-number">11</span></div><div class="box box-12"><span class="box-number">12</span></div><div class="box box-13"><span class="box-number">13</span></div><div class="box box-14"><span class="box-number">14</span></div><div class="box box-15"><span class="box-number">15</span></div><div class="box box-16"><span class="box-number">16</span></div><div class="box box-17"><span class="box-number">17</span></div><div class="box box-18"><span class="box-number">18</span></div><div class="box box-19"><span class="box-number">19</span></div><div class="box box-20"><span class="box-number">20</span></div><div class="box box-21"><span class="box-number">21</span></div><div class="box box-22"><span class="box-number">22</span></div><div class="box box-23"><span class="box-number">23</span></div><div class="box box-24"><span class="box-number">24</span></div><div class="box box-25"><span class="box-number">25</span></div><div class="box box-26"><span class="box-number">26</span></div><div class="box box-27"><span class="box-number">27</span></div><div class="box box-28"><span class="box-number">28</span></div><div class="box box-29"><span class="box-number">29</span></div><div class="box box-30"><span class="box-number">30</span></div><div class="box box-31"><span class="box-number">31</span></div><div class="box box-32"><span class="box-number">32</span></div><div class="box box-33"><span class="box-number">33</span></div><div class="box box-34"><span class="box-number">34</span></div><div class="box box-35"><span class="box-number">35</span></div><div class="box box-36"><span class="box-number">36</span></div><div class="box box-37"><span class="box-number">37</span></div><div class="box box-38"><span class="box-number">38</span></div><div class="box box-39"><span class="box-number">39</span></div><div class="box box-40"><span class="box-number">40</span></div><div class="box box-41"><span class="box-number">41</span></div><div class="box box-42"><span class="box-number">42</span></div><div class="box box-43"><span class="box-number">43</span></div><div class="box box-44"><span class="box-number">44</span></div><div class="box box-45"><span class="box-number">45</span></div><div class="box box-46"><span class="box-number">46</span></div><div class="box box-47"><span class="box-number">47</span></div><div class="box box-48"><span class="box-number">48</span></div><div class="box box-49"><span class="box-number">49</span></div><div class="box box-50"><span class="box-number">50</span></div><div class="box box-51"><span class="box-number">51</span></div><div class="box box-52"><span class="box-number">52</span></div><div class="box box-53"><span class="box-number">53</span></div><div class="box box-54"><span class="box-number">54</span></div><div class="box box-55"><span class="box-number">55</span></div><div class="box box-56"><span class="box-number">56</span></div><div class="box box-57"><span class="box-number">57</span></div><div class="box box-58"><span class="box-number">58</span></div><div class="box box-59"><span class="box-number">59</span></div><div class="box box-60"><span class="box-number">60</span></div><div class="box box-61"><span class="box-number">61</span></div><div class="box box-62"><span class="box-number">62</span></div><div class="box box-63"><span class="box-number">63</span></div><div class="box box-64"><span class="box-number">64</span></div><div class="box box-65"><span class="box-number">65</span></div><div class="box box-66"><span class="box-number">66</span></div><div class="box box-67"><span class="box-number">67</span></div><div class="box box-68"><span class="box-number">68</span></div><div class="box box-69"><span class="box-number">69</span></div><div class="box box-70"><span class="box-number">70</span></div>
+        </div>
+    </details>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+        const partCategories = {
+            'kami-iro':     { infoId: 'info-kami-iro',     colorPreviewId: 'preview-info-kami-iro', folder: '髪色画像' },
+            'hada-iro':     { infoId: 'info-hada-iro',     colorPreviewId: 'preview-info-hada-iro', folder: '肌色画像' },
+            'kami-rinkaku': { infoId: 'info-kami-rinkaku', previewId: 'preview-kami-rinkaku',      folder: '髪・輪郭画像' },
+            'mayu':         { infoId: 'info-mayu',         previewId: 'preview-mayu',              folder: '眉画像' },
+            'me':           { infoId: 'info-me',           previewId: 'preview-me',                folder: '目画像' },
+            'hana':         { infoId: 'info-hana',         previewId: 'preview-hana',              folder: '鼻画像' },
+            'hoo':          { infoId: 'info-hoo',          previewId: 'preview-hoo',               folder: '頬画像' },
+            'kuchi':        { infoId: 'info-kuchi',        previewId: 'preview-kuchi',             folder: '口画像' }
+        };
+
+        const resetPart = (categoryId) => {
+            const category = partCategories[categoryId];
+            if (!category) return;
+
+            if (category.previewId) {
+                const previewElement = document.getElementById(category.previewId);
+                if (previewElement) {
+                    previewElement.style.backgroundImage = 'none';
+                }
+            }
+
+            const infoElement = document.getElementById(category.infoId);
+            if(infoElement) infoElement.textContent = '未選択';
+
+            if (category.colorPreviewId) {
+                const colorPreviewElement = document.getElementById(category.colorPreviewId);
+                if (colorPreviewElement) {
+                    colorPreviewElement.style.backgroundColor = 'transparent';
+                    colorPreviewElement.style.backgroundImage = 'none';
+                }
+            }
+
+            const container = document.getElementById(categoryId);
+            if (container) {
+                container.querySelectorAll('.box.selected').forEach(box => {
+                    box.classList.remove('selected');
+                });
+            }
+        };
+
+        const resetAll = () => {
+            Object.keys(partCategories).forEach(categoryId => {
+                resetPart(categoryId);
+            });
+        };
+
+        const selectorOrder = [
+            'selector-kami-iro', 'selector-hada-iro', 'selector-kami-rinkaku', 'selector-mayu',
+            'selector-me', 'selector-hana', 'selector-hoo', 'selector-kuchi'
+        ];
+
+        const selectors = document.querySelectorAll('.grid-container');
+        selectors.forEach(selector => {
+            selector.addEventListener('click', (event) => {
+                const clickedBox = event.target.closest('.box');
+                if (!clickedBox) return;
+
+                const categoryId = selector.id;
+
+                if (clickedBox.classList.contains('selected')) {
+                    resetPart(categoryId);
+                    return; 
+                }
+                
+                const category = partCategories[categoryId];
+                const partNumber = clickedBox.querySelector('.box-number').textContent;
+
+                selector.querySelectorAll('.box.selected').forEach(box => {
+                    box.classList.remove('selected');
+                });
+                clickedBox.classList.add('selected');
+
+                const infoElement = document.getElementById(category.infoId);
+                if(infoElement) infoElement.textContent = partNumber;
+
+                if (categoryId === 'kami-iro' || categoryId === 'hada-iro') {
+                    const imageUrl = `url('${category.folder}/${partNumber}.png')`;
+                    const colorPreviewElement = document.getElementById(category.colorPreviewId);
+                    if (colorPreviewElement) {
+                        colorPreviewElement.style.backgroundColor = 'transparent';
+                        colorPreviewElement.style.backgroundImage = imageUrl;
+                    }
+                } else {
+                    const previewElement = document.getElementById(category.previewId);
+                    if (previewElement) {
+                       previewElement.style.backgroundImage = `url('${category.folder}/${partNumber}.png')`;
+                    }
+                }
+
+
+                const currentSelectorId = selector.closest('details').id;
+                const currentIndex = selectorOrder.indexOf(currentSelectorId);
+                
+                if (currentIndex !== -1 && currentIndex < selectorOrder.length - 1) {
+                    const nextSelectorId = selectorOrder[currentIndex + 1];
+                    const nextElement = document.getElementById(nextSelectorId);
+                    if (nextElement) {
+                        setTimeout(() => {
+                            nextElement.open = true;
+                            nextElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 100);
+                    }
+                }
+            });
+        });
+        
+        document.querySelectorAll('.reset-part-btn').forEach(button => {
+            button.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                const categoryId = event.target.dataset.category;
+                resetPart(categoryId);
+            });
+        });
+
+        document.getElementById('reset-all-btn').addEventListener('click', resetAll);
+        
+        document.querySelectorAll('.scroll-link').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+
+                const targetId = this.getAttribute('href');
+                const targetElement = document.querySelector(targetId);
+
+                if (targetElement) {
+                    targetElement.open = true;
+                    targetElement.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        resetAll();
+    });
+    </script>
+</body>
+</html>
